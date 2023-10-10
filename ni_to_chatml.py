@@ -51,6 +51,12 @@ def argparser():
         metavar='NUM',
         help='Sample at most NUM instances per task'
     )
+    ap.add_argument(
+        '--seed',
+        default=None,
+        type=int,
+        help='random seed'
+    )
     ap.add_argument('json', nargs='+')
     return ap
 
@@ -73,13 +79,15 @@ def lines(fn):
 def main(argv):
     args = argparser().parse_args(argv[1:])
 
+    random.seed(args.seed)
+
     if args.languages is not None:
         args.languages = set(args.languages.split(','))
 
     if args.exclude is not None:
         fns = args.exclude.split(',')
         args.exclude = set([l for fn in fns for l in lines(fn)])
-        
+
     for fn in args.json:
         name = os.path.splitext(os.path.basename(fn))[0]
 
@@ -93,11 +101,10 @@ def main(argv):
             if args.skip_translation and data['Categories'] == ['Translation']:
                 warning(f'skip {name}: Categories {data["Categories"]}')
                 continue
-            
+
             if skip_by_language(name, data, args):
                 continue
 
-            
             if len(data['Definition']) != 1:
                 warning(f'skip {name}: {len(data["Definition"])} definitions, will choose randomly')
 
@@ -105,7 +112,7 @@ def main(argv):
             if (args.max_instances is not None and
                 len(instances) > args.max_instances):
                 instances = random.sample(instances, args.max_instances)
-                
+
             for i in instances:
                 id_ = i['id']
                 definition = random.choice(data['Definition'])
@@ -125,6 +132,6 @@ def main(argv):
                         'text': text,
                     }, ensure_ascii=False))
 
-            
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
